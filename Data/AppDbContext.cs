@@ -1,0 +1,39 @@
+using Microsoft.EntityFrameworkCore;
+using server.Models;
+
+namespace server.Data
+{
+    public class AppDbContext : DbContext
+    {
+        public DbSet<Passenger> Passengers { get; set; }
+        public DbSet<Driver> Drivers { get; set; }
+        public DbSet<Ride> Rides { get; set; }
+
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Ride>()
+                .HasOne(r => r.Passenger)
+                .WithMany(p => p.Rides)
+                .HasForeignKey(r => r.PassengerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Ride>()
+                .HasOne(r => r.Driver)
+                .WithMany(d => d.Rides)
+                .HasForeignKey(r => r.DriverId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Ride>()
+                .Property(r => r.PaymentMethod)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Ride>()
+                .Property(r => r.Status)
+                .HasConversion<string>();
+
+            base.OnModelCreating(modelBuilder);
+        }
+    }
+}
