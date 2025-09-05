@@ -17,6 +17,5 @@ namespace server.Models.Dtos
         public decimal Distance { get; set; }
 
         public required string PaymentMethod { get; set; }
-        public required string Status { get; set; }
     }
 }

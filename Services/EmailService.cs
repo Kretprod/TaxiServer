@@ -20,7 +20,7 @@ namespace server.Services
             var emailSettings = _configuration.GetSection("EmailSettings");
 
             var message = new MimeMessage();
-            message.From.Add(new MailboxAddress("TaxiPol", emailSettings["SmtpUser "]));
+            message.From.Add(new MailboxAddress("TaxiPol", emailSettings["SmtpUser"])); // Убраны лишние пробелы
             message.To.Add(new MailboxAddress("", toEmail));
             message.Subject = "Код подтверждения";
 
@@ -38,7 +38,7 @@ namespace server.Services
             }
 
             await client.ConnectAsync(emailSettings["SmtpHost"], port, true);
-            await client.AuthenticateAsync(emailSettings["SmtpUser "], emailSettings["SmtpPass"]);
+            await client.AuthenticateAsync(emailSettings["SmtpUser"], emailSettings["SmtpPass"]);
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
         }

@@ -8,8 +8,10 @@ namespace server.Data
         public DbSet<Passenger> Passengers { get; set; }
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<Ride> Rides { get; set; }
+        public DbSet<VerificationCode> VerificationCodes { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -1,25 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http; 
 using System.ComponentModel.DataAnnotations;
 using server.Data;
 using server.Models;
 using server.Services;
 using server.Models.Dtos;
-using server.Hubs; // Добавлено для OrdersHub
+using server.Hubs; 
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Добавляем DbContext с PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Добавляем SignalR
 builder.Services.AddSignalR();
 
-// Добавляем EmailService
 builder.Services.AddScoped<EmailService>();
 
-// Добавляем CORS (ограничь для продакшена!)
+// CORS 
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -30,14 +28,13 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Добавляем логгирование
 builder.Logging.AddConsole();
 
 var app = builder.Build();
 
 app.UseCors();
 
-// Минимальные API маршруты
+// Минимальные API
 
 // POST /api/rides — Создать поездку (использует RideCreateDto)
 app.MapPost("/api/rides", async (RideCreateDto dto, AppDbContext db, ILogger<Program> logger) =>
@@ -59,7 +56,7 @@ app.MapPost("/api/rides", async (RideCreateDto dto, AppDbContext db, ILogger<Pro
     var ride = new Ride
     {
         PassengerId = dto.PassengerId,
-        Passenger = passenger, // Обязательно присваиваем объект Passenger
+        Passenger = passenger, 
         PickupLocation = dto.PickupLocation,
         PickupLatitude = dto.PickupLatitude,
         PickupLongitude = dto.PickupLongitude,
@@ -68,8 +65,8 @@ app.MapPost("/api/rides", async (RideCreateDto dto, AppDbContext db, ILogger<Pro
         DropoffLongitude = dto.DropoffLongitude,
         Price = dto.Price,
         Distance = dto.Distance,
-        PaymentMethod = Enum.Parse<PaymentMethod>(dto.PaymentMethod), // Парсим строку в enum
-        Status = RideStatus.Ищет // По умолчанию
+        PaymentMethod = Enum.Parse<PaymentMethod>(dto.PaymentMethod), 
+        Status = RideStatus.Ищет 
     };
 
     try
@@ -105,7 +102,7 @@ app.MapGet("/api/rides/{passengerId:int}", async (int passengerId, AppDbContext 
 });
 
 // POST /api/auth/send-code — Отправить код подтверждения (использует SendCodeRequest)
-app.MapPost("/api/auth/send-code", async (SendCodeRequest request, EmailService emailService, ILogger<Program> logger) =>
+app.MapPost("/api/auth/send-code", async (SendCodeRequest request, AppDbContext db, EmailService emailService, ILogger<Program> logger) =>
 {
     // Валидация
     var validationResults = new List<ValidationResult>();
@@ -116,11 +113,40 @@ app.MapPost("/api/auth/send-code", async (SendCodeRequest request, EmailService 
         return Results.BadRequest(new { Errors = validationResults.Select(v => v.ErrorMessage) });
     }
 
-    // Генерация кода (простой пример, в реальности используй случайный)
+    // Проверка лимита отправок (не более 10 в час)
+    var oneHourAgo = DateTime.UtcNow.AddHours(-1);
+    var recentCodes = await db.VerificationCodes
+        .Where(v => v.Email == request.Email && v.CreatedAt > oneHourAgo)
+        .ToListAsync();
+    if (recentCodes.Count >= 10)
+    {
+        logger.LogWarning("Too many requests for {Email}", request.Email);
+        return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+    }
+
+    // Генерация кода
     var code = new Random().Next(100000, 999999).ToString();
+    var verificationCode = new VerificationCode
+    {
+        Email = request.Email,
+        Code = code,
+        CreatedAt = DateTime.UtcNow,
+        ExpiresAt = DateTime.UtcNow.AddMinutes(10) // Действителен 10 минут
+    };
 
     try
     {
+        // Удаляем старые неиспользованные коды для этого email
+        var oldCodes = await db.VerificationCodes
+            .Where(v => v.Email == request.Email && !v.IsUsed)
+            .ToListAsync();
+        db.VerificationCodes.RemoveRange(oldCodes);
+
+        // Сохраняем новый код
+        db.VerificationCodes.Add(verificationCode);
+        await db.SaveChangesAsync();
+
+        // Отправляем email
         await emailService.SendVerificationCodeAsync(request.Email, code);
         logger.LogInformation("Verification code sent to {Email}", request.Email);
         return Results.Ok(new { Message = "Code sent successfully" });
@@ -144,13 +170,35 @@ app.MapPost("/api/auth/confirm", async (ConfirmRegistrationRequest request, AppD
         return Results.BadRequest(new { Errors = validationResults.Select(v => v.ErrorMessage) });
     }
 
-    // Простая логика: проверка кода (в реальности сравни с хранимым)
-    if (request.Code != "123456") // Пример, замени на реальную проверку
+    // Ищем код в БД
+    var verificationCode = await db.VerificationCodes
+        .FirstOrDefaultAsync(v => v.Email == request.Email && v.Code == request.Code && !v.IsUsed);
+
+    if (verificationCode == null)
     {
-        return Results.BadRequest(new { Message = "Invalid code" });
+        logger.LogWarning("Invalid or expired code for {Email}", request.Email);
+        return Results.BadRequest(new { Message = "Invalid or expired code" });
     }
 
-    // Пример: создать пассажира (расширь по необходимости)
+    // Проверяем время жизни
+    if (DateTime.UtcNow > verificationCode.ExpiresAt)
+    {
+        logger.LogWarning("Code expired for {Email}", request.Email);
+        return Results.BadRequest(new { Message = "Code expired" });
+    }
+
+    // Помечаем код как использованный
+    verificationCode.IsUsed = true;
+    await db.SaveChangesAsync();
+
+    // Создаём пассажира (или возвращаем существующего)
+    var existingPassenger = await db.Passengers.FirstOrDefaultAsync(p => p.Email == request.Email);
+    if (existingPassenger != null)
+    {
+        logger.LogInformation("Passenger already exists: {Email}", request.Email);
+        return Results.Ok(new { Message = "Already registered", PassengerId = existingPassenger.Id });
+    }
+
     var passenger = new Passenger
     {
         Name = request.Name,
