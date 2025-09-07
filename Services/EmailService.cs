@@ -20,7 +20,7 @@ namespace server.Services
             var emailSettings = _configuration.GetSection("EmailSettings");
 
             var message = new MimeMessage();
-            message.From.Add(new MailboxAddress("TaxiPol", emailSettings["SmtpUser"])); // Убраны лишние пробелы
+            message.From.Add(new MailboxAddress("TaxiPol", emailSettings["SmtpUser"]));
             message.To.Add(new MailboxAddress("", toEmail));
             message.Subject = "Код подтверждения";
 

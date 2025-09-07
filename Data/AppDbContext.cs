@@ -15,6 +15,7 @@ namespace server.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Настройка связей для Ride
             modelBuilder.Entity<Ride>()
                 .HasOne(r => r.Passenger)
                 .WithMany(p => p.Rides)
@@ -27,6 +28,7 @@ namespace server.Data
                 .HasForeignKey(r => r.DriverId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Конвертация enum в строку для БД
             modelBuilder.Entity<Ride>()
                 .Property(r => r.PaymentMethod)
                 .HasConversion<string>();
