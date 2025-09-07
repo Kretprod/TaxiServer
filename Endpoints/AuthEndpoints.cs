@@ -1,8 +1,6 @@
 // AuthEndpoints.cs
 using System.ComponentModel.DataAnnotations; // для ValidationResult, ValidationContext
 using Microsoft.EntityFrameworkCore;        // для AnyAsync и других EF Core методов
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Logging;
 using server.Models.Dtos;
 using server.Services;
 using server.Data;
@@ -16,6 +14,7 @@ namespace server.Endpoints
             // POST /api/auth/send-code — отправить код подтверждения на email
             app.MapPost("/api/auth/send-code", async (SendCodeRequest request, AppDbContext db, EmailService emailService, ILogger<Program> logger) =>
             {
+                Console.WriteLine("asdsa");
                 // Валидация запроса
                 var validationResults = new List<ValidationResult>();
                 var validationContext = new ValidationContext(request);
@@ -23,12 +22,6 @@ namespace server.Endpoints
                 {
                     logger.LogWarning("Validation failed for SendCodeRequest: {Errors}", string.Join(", ", validationResults.Select(v => v.ErrorMessage)));
                     return Results.BadRequest(new { Errors = validationResults.Select(v => v.ErrorMessage) });
-                }
-
-                // Проверка роли (дополнительная валидация)
-                if (request.Role != "passenger" && request.Role != "driver")
-                {
-                    return Results.BadRequest(new { Message = "Invalid role" });
                 }
 
                 // Ограничение: не более 10 кодов в час на один email
@@ -68,7 +61,7 @@ namespace server.Endpoints
                     // Отправляем email с кодом
                     await emailService.SendVerificationCodeAsync(request.Email, code);
                     logger.LogInformation("Verification code sent to {Email}", request.Email);
-                    return Results.Ok(new { Message = "Code sent successfully" });
+                    return Results.Ok(new { msg = "Код отправлен" });
                 }
                 catch (Exception ex)
                 {
@@ -78,7 +71,7 @@ namespace server.Endpoints
             });
 
             // POST /api/auth/confirm — подтвердить регистрацию по коду
-            app.MapPost("/api/auth/confirm", async (ConfirmRegistrationRequest request, AppDbContext db, ILogger<Program> logger) =>
+            app.MapPost("/api/auth/confirm-registration", async (ConfirmRegistrationRequest request, AppDbContext db, ILogger<Program> logger) =>
             {
                 // Валидация входных данных
                 var validationResults = new List<ValidationResult>();
@@ -89,27 +82,19 @@ namespace server.Endpoints
                     return Results.BadRequest(new { Errors = validationResults.Select(v => v.ErrorMessage) });
                 }
 
-                // Проверка роли
-                if (request.Role != "passenger" && request.Role != "driver")
-                {
-                    return Results.BadRequest(new { Message = "Invalid role" });
-                }
-
                 // Ищем код в базе, который совпадает с email и кодом, и не использован
                 var verificationCode = await db.VerificationCodes
                     .FirstOrDefaultAsync(v => v.Email == request.Email && v.Code == request.Code && !v.IsUsed);
 
                 if (verificationCode == null)
                 {
-                    logger.LogWarning("Invalid or expired code for {Email}", request.Email);
-                    return Results.BadRequest(new { Message = "Invalid or expired code" });
+                    return Results.BadRequest(new { msg = "Неверный код" });
                 }
 
                 // Проверяем срок действия кода
                 if (DateTime.UtcNow > verificationCode.ExpiresAt)
                 {
-                    logger.LogWarning("Code expired for {Email}", request.Email);
-                    return Results.BadRequest(new { Message = "Code expired" });
+                    return Results.BadRequest(new { msg = "Срок действия кода истёк" });
                 }
 
                 // Помечаем код как использованный
@@ -119,10 +104,13 @@ namespace server.Endpoints
                 // Проверяем, есть ли уже пользователь с таким email (пассажир или водитель)
                 var existingPassenger = await db.Passengers.FirstOrDefaultAsync(p => p.Email == request.Email);
                 var existingDriver = await db.Drivers.FirstOrDefaultAsync(d => d.Email == request.Email);
-                if (existingPassenger != null || existingDriver != null)
+                if (request.Role == "passenger" && existingPassenger != null)
                 {
-                    logger.LogInformation("User already exists: {Email}", request.Email);
-                    return Results.Ok(new { Message = "Already registered" });
+                    return Results.Ok(new { msg = "Вход прошёл успешно", user = existingPassenger });
+                }
+                else if (request.Role == "driver" && existingDriver != null)
+                {
+                    return Results.Ok(new { msg = "Вход прошёл успешно", user = existingDriver });
                 }
 
                 try
@@ -134,12 +122,11 @@ namespace server.Endpoints
                         {
                             Name = request.Name,
                             Email = request.Email,
-                            Phone = request.Phone
+                            Phone = request.Phone,
                         };
                         db.Passengers.Add(passenger);
                         await db.SaveChangesAsync();
-                        logger.LogInformation("Passenger registered: {Email}", request.Email);
-                        return Results.Ok(new { Message = "Registration confirmed", UserId = passenger.Id, Role = "passenger" });
+                        return Results.Ok(new { msg = "Регестрация прошла успешно", user = passenger });
                     }
                     else if (request.Role == "driver")
                     {
@@ -152,18 +139,17 @@ namespace server.Endpoints
                         };
                         db.Drivers.Add(driver);
                         await db.SaveChangesAsync();
-                        logger.LogInformation("Driver registered: {Email}", request.Email);
-                        return Results.Ok(new { Message = "Registration confirmed", UserId = driver.Id, Role = "driver" });
+                        return Results.Ok(new { msg = "Регестрация прошла успешно", user = driver });
                     }
                     else
                     {
-                        return Results.BadRequest(new { Message = "Invalid role" });
+                        return Results.BadRequest(new { msg = "Неверная роль" });
                     }
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Error registering user {Email}", request.Email);
-                    return Results.Problem("Internal server error");
+                    logger.LogError(ex, "Ошибка при регистрации пользователя {Email}", request.Email);
+                    return Results.Problem("Внутренняя ошибка сервера");
                 }
             });
         }

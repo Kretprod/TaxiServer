@@ -1,15 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http;
-using System.ComponentModel.DataAnnotations;
 using server.Data;
-using server.Models;
 using server.Services;
-using server.Models.Dtos;
 using server.Hubs;
 using server.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseUrls("http://0.0.0.0:5251");
 
 // Регистрируем контекст базы данных с PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>

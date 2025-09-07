@@ -1,10 +1,6 @@
-// OrdersEndpoints.cs
 using System.ComponentModel.DataAnnotations; // для ValidationResult, ValidationContext
 using Microsoft.EntityFrameworkCore;        // для AnyAsync и других EF Core методов
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Logging;
 using server.Models.Dtos;
-using server.Services;
 using server.Data;
 using server.Models;
 
