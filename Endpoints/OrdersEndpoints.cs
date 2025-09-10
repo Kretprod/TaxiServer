@@ -88,6 +88,38 @@ namespace server.Endpoints
                 }
             });
 
+            // PATCH /api/rides/{orderId}/price — увеличить цену заказа на указанную сумму
+            app.MapPatch("/api/rides/{orderId:int}/price", async (int orderId, PriceUpdateRequest request, AppDbContext db, ILogger<Program> logger) =>
+            {
+                try
+                {
+                    var ride = await db.Rides.FindAsync(orderId);
+                    if (ride == null)
+                    {
+                        logger.LogWarning("Попытка обновить цену несуществующего заказа с Id {OrderId}", orderId);
+                        return Results.NotFound(new { Message = "Заказ не найден" });
+                    }
+
+                    if (request.Amount <= 0)
+                    {
+                        return Results.BadRequest(new { Message = "Сумма увеличения должна быть положительной" });
+                    }
+
+                    ride.Price += request.Amount;
+
+                    await db.SaveChangesAsync();
+
+                    logger.LogInformation("Цена заказа с Id {OrderId} увеличена на {Amount}. Новая цена: {NewPrice}", orderId, request.Amount, ride.Price);
+
+                    return Results.Ok(new { Message = "Цена успешно обновлена", ride });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Ошибка при обновлении цены заказа с Id {OrderId}", orderId);
+                    return Results.Problem("Внутренняя ошибка сервера");
+                }
+            });
+
             // Новый эндпоинт для удаления заказа
             app.MapDelete("/api/rides/{orderId:int}", async (int orderId, AppDbContext db, ILogger<Program> logger) =>
             {
@@ -113,88 +145,133 @@ namespace server.Endpoints
                 }
             });
 
-            // POST /api/rides/accept — принятие заказа водителем
-            app.MapPost("/api/rides/accept", async (AcceptRideRequest request, AppDbContext db, ILogger<Program> logger) =>
+
+
+            // PUT /api/rides/{orderId}/accept — принять заказ водителем
+            app.MapPut("/api/rides/{orderId:int}/accept", async (int orderId, AcceptOrderRequest request, AppDbContext db, ILogger<Program> logger) =>
             {
+                logger.LogInformation("Водитель {DriverId} пытается принять заказ {OrderId}", request.DriverId, orderId);
+
                 try
                 {
-                    // Найти заказ по RideId
-                    var ride = await db.Rides.FindAsync(request.RideId);
+                    var ride = await db.Rides.FindAsync(orderId);
                     if (ride == null)
-                        return Results.NotFound(new { Message = "Заказ не найден" });
+                    {
+                        logger.LogWarning("Заказ с Id {OrderId} не найден", orderId);
+                        return Results.NotFound(new { error = "Заказ не найден" });
+                    }
 
-                    // Проверить, что водитель ещё не назначен
+                    // Проверяем, принял ли уже кто-то этот заказ
                     if (ride.DriverId != null)
-                        return Results.BadRequest(new { Message = "Заказ уже принят другим водителем" });
+                    {
+                        logger.LogWarning("Заказ {OrderId} уже принят водителем {DriverIdExisting}", orderId, ride.DriverId);
+                        return Results.BadRequest(new { error = "Заказ уже принят другим водителем" });
+                    }
 
-                    // Назначить водителя и обновить статус
+                    // Проверяем, что водитель существует (если есть таблица Drivers)
+                    var driverExists = await db.Drivers.AnyAsync(d => d.Id == request.DriverId);
+                    if (!driverExists)
+                    {
+                        logger.LogWarning("Водитель с Id {DriverId} не найден", request.DriverId);
+                        return Results.BadRequest(new { error = "Водитель не найден" });
+                    }
+
+                    // Назначаем водителя и меняем статус
                     ride.DriverId = request.DriverId;
-                    ride.Status = RideStatus.Ожидает;
+                    ride.Status = RideStatus.Ожидает; // или нужный статус принятия
 
                     await db.SaveChangesAsync();
 
-                    return Results.Ok(new { Message = "Заказ принят", RideId = ride.Id, DriverId = ride.DriverId, Status = ride.Status });
+                    logger.LogInformation("Заказ {OrderId} успешно принят водителем {DriverId}", orderId, request.DriverId);
+
+                    return Results.Ok(new { msg = "Заказ принят" });
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Error accepting ride {RideId} by driver {DriverId}", request.RideId, request.DriverId);
-                    return Results.Problem("Internal server error");
+                    logger.LogError(ex, "Ошибка при принятии заказа {OrderId} водителем {DriverId}", orderId, request.DriverId);
+                    return Results.Problem("Внутренняя ошибка сервера");
                 }
             });
 
-            // GET /api/rides/driver/{driverId} — получить поездку водителя
-            app.MapGet("/api/rides/driver/{driverId:int}", async (int driverId, AppDbContext db, ILogger<Program> logger) =>
+
+            // GET /api/rides/driver/{driverId}/active — получить активную поездку водителя
+            app.MapGet("/api/rides/driver/{driverId:int}/active", async (int driverId, AppDbContext db, ILogger<Program> logger) =>
             {
+                logger.LogInformation("Получен запрос активной поездки для водителя {Id}", driverId);
                 try
                 {
-                    // Получаем первую поездку водителя, включая данные пассажира
-                    var ride = await db.Rides
-                        .Where(r => r.DriverId == driverId)  // Исправлено на DriverId
-                        .Include(r => r.Passenger)
-                        .FirstOrDefaultAsync();
-
-                    if (ride == null)
+                    var driverExists = await db.Drivers.AnyAsync(d => d.Id == driverId);
+                    if (!driverExists)
                     {
-                        return Results.NotFound(new { Message = "Поездка для данного водителя не найдена" });
+                        logger.LogWarning("Driver not found: {Id}", driverId);
+                        return Results.NotFound(new { Message = "Водитель не найден" });
                     }
 
+                    var ride = await db.Rides
+                        .Where(r => r.DriverId == driverId)  // Исправлено на PassengerId
+                        .FirstOrDefaultAsync();
                     return Results.Ok(ride);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Error fetching ride for driver {Id}", driverId);
-                    return Results.Problem("Internal server error");
+                    logger.LogError(ex, "Ошибка при получении активной поездки для водителя {Id}", driverId);
+                    return Results.Problem("Внутренняя ошибка сервера");
                 }
             });
 
             // POST /api/orders/update-status — обновить статус заказа
-            app.MapPost("/api/orders/update-status", async (UpdateOrderStatusRequest request, AppDbContext db, ILogger<Program> logger) =>
+            app.MapPost("/api/rides/{orderId:int}/status", async (int orderId, UpdateOrderStatusRequest request, AppDbContext db, ILogger<Program> logger) =>
             {
+                logger.LogInformation("Запрос на обновление статуса заказа {OrderId} на {NewStatus}", orderId, request.NewStatus);
+
+                // Проверяем валидность статуса
+                var validStatuses = new[] { RideStatus.Ожидает, RideStatus.Подъезжает, RideStatus.Впути };
+                if (!validStatuses.Contains(request.NewStatus))
+                {
+                    logger.LogWarning("Недопустимый статус: {Status}", request.NewStatus);
+                    return Results.BadRequest(new { error = "Недопустимый статус" });
+                }
+
                 try
                 {
-                    // Найти заказ
-                    var order = await db.Rides.FindAsync(request.OrderId);
-                    if (order == null)
-                        return Results.NotFound(new { Message = "Заказа нет" });
-
-                    // Валидация статуса
-                    if (!Enum.IsDefined(typeof(RideStatus), request.NewStatus))
+                    var ride = await db.Rides.FindAsync(orderId);
+                    if (ride == null)
                     {
-                        return Results.BadRequest(new { Message = "Недопустимое значение статуса" });
+                        logger.LogWarning("Заказ с Id {OrderId} не найден", orderId);
+                        return Results.NotFound(new { error = "Заказ не найден" });
                     }
 
-                    // Обновить статус
-                    order.Status = request.NewStatus;
+                    // Обновляем статус
+                    ride.Status = request.NewStatus;
 
-                    // Сохранить изменения
                     await db.SaveChangesAsync();
-                    logger.LogInformation("Order {OrderId} status updated to {Status}", request.OrderId, request.NewStatus);
-                    return Results.Ok(new { Message = "Статус обновлён" });
+
+                    logger.LogInformation("Статус заказа {OrderId} успешно обновлен на {Status}", orderId, request.NewStatus);
+                    return Results.Ok(new { message = "Статус обновлен" });
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Error updating status for order {OrderId}", request.OrderId);
-                    return Results.Problem("Internal server error");
+                    logger.LogError(ex, "Ошибка при обновлении статуса заказа {OrderId}", orderId);
+                    return Results.Problem("Внутренняя ошибка сервера");
+                }
+            });
+
+            app.MapGet("/api/rides/available", async (AppDbContext db, ILogger<Program> logger) =>
+            {
+                logger.LogInformation("Запрос списка доступных заказов (без назначенного водителя)");
+
+                try
+                {
+                    var availableRides = await db.Rides
+                        .Where(r => r.DriverId == null)  // Заказы без водителя
+                        .ToListAsync();
+
+                    return Results.Ok(availableRides);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Ошибка при получении доступных заказов");
+                    return Results.Problem("Внутренняя ошибка сервера");
                 }
             });
         }

@@ -48,21 +48,19 @@ namespace server.Models.Dtos
         public required string PaymentMethod { get; set; }
     }
 
-    public class AcceptRideRequest
+    public class AcceptOrderRequest
     {
-        [Required]
-        public int RideId { get; set; }
-
-        [Required]
+        [JsonPropertyName("driver_id")] // если используете System.Text.Json
         public int DriverId { get; set; }
     }
 
     public class UpdateOrderStatusRequest
     {
         [Required]
-        public int OrderId { get; set; }
-
-        [Required]
         public RideStatus NewStatus { get; set; }
+    }
+    public class PriceUpdateRequest
+    {
+        public decimal Amount { get; set; }
     }
 }
