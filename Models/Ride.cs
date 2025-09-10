@@ -1,5 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace server.Models
 {
@@ -21,49 +20,48 @@ namespace server.Models
     {
         public int Id { get; set; }
 
-        [Required]
+        [JsonPropertyName("passenger_id")]
         public int PassengerId { get; set; }
 
-        [Required]
-        public required Passenger Passenger { get; set; }
+        [JsonIgnore]
+        public Passenger Passenger { get; set; } = null!;
 
+        [JsonPropertyName("driver_id")]
         public int? DriverId { get; set; }
+
+        [JsonIgnore]
         public Driver? Driver { get; set; }
 
-        [Required]
-        public required string PickupLocation { get; set; }
+        [JsonPropertyName("pickup_location")]
+        public string PickupLocation { get; set; } = string.Empty;
 
-        [Required]
-        [Column(TypeName = "decimal(10,7)")]
+        [JsonPropertyName("pickup_latitude")]
         public decimal PickupLatitude { get; set; }
 
-        [Required]
-        [Column(TypeName = "decimal(10,7)")]
+        [JsonPropertyName("pickup_longitude")]
         public decimal PickupLongitude { get; set; }
 
-        [Required]
-        public required string DropoffLocation { get; set; }
+        [JsonPropertyName("dropoff_location")]
+        public string DropoffLocation { get; set; } = string.Empty;
 
-        [Required]
-        [Column(TypeName = "decimal(10,7)")]
+        [JsonPropertyName("dropoff_latitude")]
         public decimal DropoffLatitude { get; set; }
 
-        [Required]
-        [Column(TypeName = "decimal(10,7)")]
+        [JsonPropertyName("dropoff_longitude")]
         public decimal DropoffLongitude { get; set; }
 
-        [Required]
-        [Column(TypeName = "decimal(10,2)")]
+        [JsonPropertyName("price")]
         public decimal Price { get; set; }
 
-        [Required]
-        [Column(TypeName = "decimal(10,2)")]
+        [JsonPropertyName("distance")]
         public decimal Distance { get; set; }
 
-        [Required]
+        [JsonPropertyName("payment_method")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public PaymentMethod PaymentMethod { get; set; }
 
-        [Required]
-        public RideStatus Status { get; set; } = RideStatus.Ищет;
+        [JsonPropertyName("status")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public RideStatus Status { get; set; }
     }
 }

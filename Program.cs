@@ -3,6 +3,7 @@ using server.Data;
 using server.Services;
 using server.Hubs;
 using server.Endpoints;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddSignalR();
 
 // Регистрируем сервис для отправки email (EmailService)
-builder.Services.AddHttpClient<SmsService>();  // Добавьте эту строку, если её нет
+builder.Services.AddHttpClient<SmsService>();
 
 // Настройка CORS — разрешаем любые заголовки, методы и источники (для разработки)
 builder.Services.AddCors(options =>
@@ -27,6 +28,12 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowAnyOrigin();
     });
+});
+
+// Настройка сериализации JSON для минимальных API: enum в строки
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
 // Добавляем логирование в консоль

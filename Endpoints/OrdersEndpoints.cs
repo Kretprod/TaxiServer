@@ -53,7 +53,7 @@ namespace server.Endpoints
                     db.Rides.Add(ride);
                     await db.SaveChangesAsync();
                     logger.LogInformation("Ride created with ID: {Id}", ride.Id);
-                    return Results.Created($"/api/rides/create/{ride.Id}", new { ride = ride });
+                    return Results.Created($"/api/rides/create/{ride.Id}", new { ride });
                 }
                 catch (Exception ex)
                 {
@@ -65,6 +65,7 @@ namespace server.Endpoints
             // GET /api/rides/passenger/{passengerId}/active — получить активную поездку пассажира
             app.MapGet("/api/rides/passenger/{passengerId:int}/active", async (int passengerId, AppDbContext db, ILogger<Program> logger) =>
             {
+                logger.LogInformation("Получен запрос активной поездки для пассажира {Id}", passengerId);
                 try
                 {
                     // Проверяем, существует ли пассажир (опционально, но полезно)
@@ -83,6 +84,31 @@ namespace server.Endpoints
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Error fetching active ride for passenger {Id}", passengerId);
+                    return Results.Problem("Внутренняя ошибка сервера");
+                }
+            });
+
+            // Новый эндпоинт для удаления заказа
+            app.MapDelete("/api/rides/{orderId:int}", async (int orderId, AppDbContext db, ILogger<Program> logger) =>
+            {
+                try
+                {
+                    var order = await db.Rides.FindAsync(orderId);
+                    if (order == null)
+                    {
+                        logger.LogWarning("Попытка удалить несуществующий заказ с Id {OrderId}", orderId);
+                        return Results.NotFound(new { Message = "Заказ не найден" });
+                    }
+
+                    db.Rides.Remove(order);
+                    await db.SaveChangesAsync();
+
+                    logger.LogInformation("Заказ с Id {OrderId} успешно удалён", orderId);
+                    return Results.Ok(new { Message = "Заказ успешно удалён" });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Ошибка при удалении заказа с Id {OrderId}", orderId);
                     return Results.Problem("Внутренняя ошибка сервера");
                 }
             });
