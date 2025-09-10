@@ -9,8 +9,8 @@ namespace server.Models
         public int Id { get; set; }
 
         [Required]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
+        [Phone]  // Исправлено с [EmailAddress] на [Phone]
+        public string Phone { get; set; } = string.Empty;
 
         [Required]
         public string Code { get; set; } = string.Empty;

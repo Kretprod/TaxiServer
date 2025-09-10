@@ -9,9 +9,12 @@ namespace server.Data
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<Ride> Rides { get; set; }
         public DbSet<VerificationCode> VerificationCodes { get; set; }
+        // ОБЯЗАТЕЛЬНО ДОБАВИТЬ ЭТОТ КОНСТРУКТОР!
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        {
+        }
 
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-        
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

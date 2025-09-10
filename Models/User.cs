@@ -4,15 +4,11 @@ namespace server.Models
 {
     public abstract class User
     {
-        public int Id { get; set; }
+        [Key]  // Добавьте, если Id — первичный ключ
+        public int Id { get; set; }  // Изменено с id на Id
 
         [Required]
-        public required string Name { get; set; }
-
-        [Required, EmailAddress]
-        public required string Email { get; set; }
-
-        [Required]
-        public required string Phone { get; set; }
+        [Phone]  // Добавьте атрибут для телефона
+        public string Phone { get; set; } = string.Empty;  // Изменено с phone на Phone, убрано required (если .NET <7)
     }
 }

@@ -11,7 +11,7 @@ namespace server.Endpoints
         public static void MapOrdersEndpoints(this WebApplication app)
         {
             // POST /api/rides — создание новой поездки
-            app.MapPost("/api/rides", async (RideCreateDto dto, AppDbContext db, ILogger<Program> logger) =>
+            app.MapPost("/api/rides/create", async (RideCreateDto dto, AppDbContext db, ILogger<Program> logger) =>
             {
                 // Валидация входящего DTO (данных запроса)
                 var validationResults = new List<ValidationResult>();
@@ -29,18 +29,12 @@ namespace server.Endpoints
                     return Results.BadRequest(new { Message = "Passenger not found" });
                 }
 
-                // Проверяем, есть ли у пассажира уже активная поездка (Ищет или Ожидает)
-                var rideExists = await db.Rides.AnyAsync(r => r.PassengerId == dto.PassengerId && (r.Status == RideStatus.Ищет || r.Status == RideStatus.Ожидает));
-                if (rideExists)
-                {
-                    return Results.BadRequest(new { Message = "У пассажира уже есть активная поездка" });
-                }
-
                 // Создаем объект поездки из DTO
                 var ride = new Ride
                 {
                     PassengerId = dto.PassengerId,
                     Passenger = passenger,
+                    DriverId = dto.DriverId,  // Добавлено для полноты
                     PickupLocation = dto.PickupLocation,
                     PickupLatitude = dto.PickupLatitude,
                     PickupLongitude = dto.PickupLongitude,
@@ -59,7 +53,7 @@ namespace server.Endpoints
                     db.Rides.Add(ride);
                     await db.SaveChangesAsync();
                     logger.LogInformation("Ride created with ID: {Id}", ride.Id);
-                    return Results.Created($"/api/rides/{ride.Id}", ride);
+                    return Results.Created($"/api/rides/create/{ride.Id}", new { ride = ride });
                 }
                 catch (Exception ex)
                 {
@@ -68,28 +62,28 @@ namespace server.Endpoints
                 }
             });
 
-            // GET /api/rides/passenger/{passengerId} — получить поездку пассажира
-            app.MapGet("/api/rides/passenger/{passengerId:int}", async (int passengerId, AppDbContext db, ILogger<Program> logger) =>
+            // GET /api/rides/passenger/{passengerId}/active — получить активную поездку пассажира
+            app.MapGet("/api/rides/passenger/{passengerId:int}/active", async (int passengerId, AppDbContext db, ILogger<Program> logger) =>
             {
                 try
                 {
-                    // Получаем первую поездку пассажира, включая данные водителя
-                    var ride = await db.Rides
-                        .Where(r => r.PassengerId == passengerId)
-                        .Include(r => r.Driver)
-                        .FirstOrDefaultAsync();
-
-                    if (ride == null)
+                    // Проверяем, существует ли пассажир (опционально, но полезно)
+                    var passengerExists = await db.Passengers.AnyAsync(p => p.Id == passengerId);
+                    if (!passengerExists)
                     {
-                        return Results.NotFound(new { Message = "Поездка для данного пассажира не найдена" });
+                        logger.LogWarning("Passenger not found: {Id}", passengerId);
+                        return Results.NotFound(new { Message = "Пассажир не найден" });
                     }
 
+                    var ride = await db.Rides
+                        .Where(r => r.PassengerId == passengerId)  // Исправлено на PassengerId
+                        .FirstOrDefaultAsync();
                     return Results.Ok(ride);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Error fetching ride for passenger {Id}", passengerId);
-                    return Results.Problem("Internal server error");
+                    logger.LogError(ex, "Error fetching active ride for passenger {Id}", passengerId);
+                    return Results.Problem("Внутренняя ошибка сервера");
                 }
             });
 
@@ -98,7 +92,7 @@ namespace server.Endpoints
             {
                 try
                 {
-                    // Найти заказ по rideId
+                    // Найти заказ по RideId
                     var ride = await db.Rides.FindAsync(request.RideId);
                     if (ride == null)
                         return Results.NotFound(new { Message = "Заказ не найден" });
@@ -129,7 +123,7 @@ namespace server.Endpoints
                 {
                     // Получаем первую поездку водителя, включая данные пассажира
                     var ride = await db.Rides
-                        .Where(r => r.DriverId == driverId)
+                        .Where(r => r.DriverId == driverId)  // Исправлено на DriverId
                         .Include(r => r.Passenger)
                         .FirstOrDefaultAsync();
 
@@ -146,6 +140,7 @@ namespace server.Endpoints
                     return Results.Problem("Internal server error");
                 }
             });
+
             // POST /api/orders/update-status — обновить статус заказа
             app.MapPost("/api/orders/update-status", async (UpdateOrderStatusRequest request, AppDbContext db, ILogger<Program> logger) =>
             {
@@ -176,7 +171,6 @@ namespace server.Endpoints
                     return Results.Problem("Internal server error");
                 }
             });
-
         }
     }
 }

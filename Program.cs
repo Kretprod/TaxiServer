@@ -16,7 +16,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddSignalR();
 
 // Регистрируем сервис для отправки email (EmailService)
-builder.Services.AddScoped<EmailService>();
+builder.Services.AddHttpClient<SmsService>();  // Добавьте эту строку, если её нет
 
 // Настройка CORS — разрешаем любые заголовки, методы и источники (для разработки)
 builder.Services.AddCors(options =>
