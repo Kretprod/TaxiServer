@@ -220,7 +220,7 @@ namespace server.Endpoints
             });
 
             // POST /api/orders/update-status — обновить статус заказа
-            app.MapPost("/api/rides/{orderId:int}/status", async (int orderId, UpdateOrderStatusRequest request, AppDbContext db, ILogger<Program> logger) =>
+            app.MapPut("/api/rides/{orderId:int}/status", async (int orderId, UpdateOrderStatusRequest request, AppDbContext db, ILogger<Program> logger) =>
             {
                 logger.LogInformation("Запрос на обновление статуса заказа {OrderId} на {NewStatus}", orderId, request.NewStatus);
 
