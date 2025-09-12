@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations; // для ValidationResult, ValidationContext
 using Microsoft.EntityFrameworkCore;        // для AnyAsync и других EF Core методов
+using Microsoft.AspNetCore.SignalR;
 using server.Models.Dtos;
 using server.Data;
 using server.Models;
+using server.Hubs;
 
 namespace server.Endpoints
 {
@@ -121,7 +123,7 @@ namespace server.Endpoints
             });
 
             // Новый эндпоинт для удаления заказа
-            app.MapDelete("/api/rides/{orderId:int}", async (int orderId, AppDbContext db, ILogger<Program> logger) =>
+            app.MapDelete("/api/rides/{orderId:int}", async (int orderId, AppDbContext db, ILogger<Program> logger, IHubContext<OrdersHub> ordersHub) =>
             {
                 try
                 {
@@ -135,6 +137,9 @@ namespace server.Endpoints
                     db.Rides.Remove(order);
                     await db.SaveChangesAsync();
 
+                    // Отправляем уведомление всем подписанным клиентам
+                    await ordersHub.Clients.Group($"order_{orderId}").SendAsync("OrderStatusChanged", orderId);
+
                     logger.LogInformation("Заказ с Id {OrderId} успешно удалён", orderId);
                     return Results.Ok(new { Message = "Заказ успешно удалён" });
                 }
@@ -145,10 +150,45 @@ namespace server.Endpoints
                 }
             });
 
+            app.MapGet("/api/rides/history/{userId:int}", async (int userId, string? role, AppDbContext db, ILogger<Program> logger) =>
+            {
+                logger.LogInformation("Запрос истории поездок для пользователя с Id {UserId} и ролью {Role}", userId, role);
+
+                try
+                {
+                    IQueryable<RideHistory> query = db.RideHistories;
+
+                    if (string.IsNullOrEmpty(role))
+                    {
+                        return Results.BadRequest("Параметр role должен быть 'driver' или 'passenger'");
+                    }
+                    else if (role.ToLower() == "driver")
+                    {
+                        query = query.Where(r => r.DriverId == userId);
+                    }
+                    else if (role.ToLower() == "passenger")
+                    {
+                        query = query.Where(r => r.PassengerId == userId);
+                    }
+                    else
+                    {
+                        return Results.BadRequest("Параметр role должен быть 'driver' или 'passenger'");
+                    }
+
+                    var rideHistory = await query.OrderByDescending(r => r.CompletedAt).ToListAsync();
+
+                    return Results.Ok(rideHistory);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Ошибка при получении истории поездок для пользователя с Id {UserId}", userId);
+                    return Results.Problem("Внутренняя ошибка сервера");
+                }
+            });
 
 
             // PUT /api/rides/{orderId}/accept — принять заказ водителем
-            app.MapPut("/api/rides/{orderId:int}/accept", async (int orderId, AcceptOrderRequest request, AppDbContext db, ILogger<Program> logger) =>
+            app.MapPut("/api/rides/{orderId:int}/accept", async (int orderId, AcceptOrderRequest request, AppDbContext db, ILogger<Program> logger, IHubContext<OrdersHub> ordersHub) =>
             {
                 logger.LogInformation("Водитель {DriverId} пытается принять заказ {OrderId}", request.DriverId, orderId);
 
@@ -181,6 +221,10 @@ namespace server.Endpoints
                     ride.Status = RideStatus.Ожидает; // или нужный статус принятия
 
                     await db.SaveChangesAsync();
+
+                    // Отправляем уведомление всем подписанным клиентам
+                    await ordersHub.Clients.Group($"order_{orderId}").SendAsync("OrderStatusChanged", orderId, ride.Status.ToString());
+
 
                     logger.LogInformation("Заказ {OrderId} успешно принят водителем {DriverId}", orderId, request.DriverId);
 
@@ -220,7 +264,7 @@ namespace server.Endpoints
             });
 
             // POST /api/orders/update-status — обновить статус заказа
-            app.MapPut("/api/rides/{orderId:int}/status", async (int orderId, UpdateOrderStatusRequest request, AppDbContext db, ILogger<Program> logger) =>
+            app.MapPut("/api/rides/{orderId:int}/status", async (int orderId, UpdateOrderStatusRequest request, AppDbContext db, ILogger<Program> logger, IHubContext<OrdersHub> ordersHub) =>
             {
                 logger.LogInformation("Запрос на обновление статуса заказа {OrderId} на {NewStatus}", orderId, request.NewStatus);
 
@@ -246,6 +290,9 @@ namespace server.Endpoints
 
                     await db.SaveChangesAsync();
 
+                    // Отправляем уведомление всем подписанным клиентам
+                    await ordersHub.Clients.Group($"order_{orderId}").SendAsync("OrderStatusChanged", orderId, request.NewStatus.ToString());
+
                     logger.LogInformation("Статус заказа {OrderId} успешно обновлен на {Status}", orderId, request.NewStatus);
                     return Results.Ok(new { message = "Статус обновлен" });
                 }
@@ -255,6 +302,51 @@ namespace server.Endpoints
                     return Results.Problem("Внутренняя ошибка сервера");
                 }
             });
+
+            app.MapPost("/api/rides/{orderId:int}/complete", async (int orderId, AppDbContext db, ILogger<Program> logger, IHubContext<OrdersHub> ordersHub) =>
+            {
+                try
+                {
+                    var ride = await db.Rides.FindAsync(orderId);
+                    if (ride == null)
+                    {
+                        logger.LogWarning("Попытка завершить несуществующий заказ с Id {OrderId}", orderId);
+                        return Results.NotFound(new { Message = "Заказ не найден" });
+                    }
+
+                    var rideHistory = new RideHistory
+                    {
+                        PassengerId = ride.PassengerId,
+                        DriverId = ride.DriverId,
+                        PickupLocation = ride.PickupLocation,
+                        PickupLatitude = ride.PickupLatitude,
+                        PickupLongitude = ride.PickupLongitude,
+                        DropoffLocation = ride.DropoffLocation,
+                        DropoffLatitude = ride.DropoffLatitude,
+                        DropoffLongitude = ride.DropoffLongitude,
+                        Price = ride.Price,
+                        Distance = ride.Distance,
+                        PaymentMethod = ride.PaymentMethod,
+                        CompletedAt = DateTime.UtcNow
+                    };
+
+                    db.RideHistories.Add(rideHistory);
+                    db.Rides.Remove(ride);
+                    await db.SaveChangesAsync();
+
+                    // Отправляем уведомление всем подписанным клиентам
+                    await ordersHub.Clients.Group($"order_{orderId}").SendAsync("OrderStatusChanged", orderId);
+
+                    logger.LogInformation("Заказ с Id {OrderId} завершён и сохранён в историю", orderId);
+                    return Results.Ok(new { Message = "Заказ успешно завершён" });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Ошибка при завершении заказа с Id {OrderId}", orderId);
+                    return Results.Problem("Внутренняя ошибка сервера");
+                }
+            });
+
 
             app.MapGet("/api/rides/available", async (AppDbContext db, ILogger<Program> logger) =>
             {

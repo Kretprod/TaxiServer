@@ -26,7 +26,7 @@ namespace server.Endpoints
                 var recentCodes = await db.VerificationCodes
                     .Where(v => v.Phone == request.Phone && v.CreatedAt > oneHourAgo)
                     .ToListAsync();
-                if (recentCodes.Count >= 10)
+                if (recentCodes.Count >= 55)
                 {
                     logger.LogWarning("Too many requests for {Phone}", request.Phone);
                     return Results.StatusCode(StatusCodes.Status429TooManyRequests);

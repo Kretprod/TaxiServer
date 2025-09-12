@@ -8,6 +8,7 @@ namespace server.Data
         public DbSet<Passenger> Passengers { get; set; }
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<Ride> Rides { get; set; }
+        public DbSet<RideHistory> RideHistories { get; set; }
         public DbSet<VerificationCode> VerificationCodes { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -35,6 +36,11 @@ namespace server.Data
 
             modelBuilder.Entity<Ride>()
                 .Property(r => r.Status)
+                .HasConversion<string>();
+
+            //конвертер для enum PaymentMethod RideHistory
+            modelBuilder.Entity<RideHistory>()
+                .Property(r => r.PaymentMethod)
                 .HasConversion<string>();
 
             base.OnModelCreating(modelBuilder);

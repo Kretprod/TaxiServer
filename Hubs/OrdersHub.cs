@@ -14,5 +14,10 @@ namespace server.Hubs
         {
             return Groups.RemoveFromGroupAsync(Context.ConnectionId, $"order_{orderId}");
         }
+        // Метод для отправки обновления статуса заказа группе (пассажир + водитель)
+        public async Task NotifyOrderStatusChanged(int orderId, string newStatus)
+        {
+            await Clients.Group($"order_{orderId}").SendAsync("OrderStatusChanged", orderId, newStatus);
+        }
     }
 }
