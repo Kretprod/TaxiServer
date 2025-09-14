@@ -4,6 +4,10 @@ using server.Data;
 using server.Models;
 using server.Models.Dtos;
 using System.ComponentModel.DataAnnotations;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace server.Services
 {
@@ -14,11 +18,47 @@ namespace server.Services
         private readonly SmsService _smsService;    // Сервис для отправки SMS (код подтверждения)
         private readonly ILogger<AuthService> _logger;  // Логгер для записи информации и ошибок
 
-        public AuthService(AppDbContext db, SmsService smsService, ILogger<AuthService> logger)
+        private readonly IConfiguration _configuration; // Для чтения настроек токена
+
+        public AuthService(AppDbContext db, SmsService smsService, ILogger<AuthService> logger, IConfiguration configuration)
         {
             _db = db;
             _smsService = smsService;
             _logger = logger;
+            _configuration = configuration;
+        }
+
+        // Метод для генерации JWT токена
+        private string GenerateJwtToken(int userId, string role)
+        {
+            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var secretKey = jwtSettings.GetValue<string>("SecretKey");
+            if (string.IsNullOrEmpty(secretKey))
+            {
+                throw new InvalidOperationException("JWT SecretKey is not configured.");
+            }
+
+            var issuer = jwtSettings.GetValue<string>("Issuer");
+            var audience = jwtSettings.GetValue<string>("Audience");
+            var expiryMinutes = jwtSettings.GetValue<int>("ExpiryMinutes");
+
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            var claims = new[]
+            {
+            new Claim("id", userId.ToString()),
+            new Claim(ClaimTypes.Role, role)
+        };
+
+            var token = new JwtSecurityToken(
+                issuer: issuer,
+                audience: audience,
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
+                signingCredentials: credentials);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         // Отправка кода подтверждения на телефон
@@ -123,22 +163,26 @@ namespace server.Services
 
             if (request.Role == "passenger" && existingPassenger != null)
             {
+                var token = GenerateJwtToken(existingPassenger.Id, "passenger");
                 // Если пассажир найден — это вход
                 return (true, "Login successful", new
                 {
                     existingPassenger.Id,
                     existingPassenger.Phone,
-                    role = "passenger"
+                    role = "passenger",
+                    token
                 });
             }
             else if (request.Role == "driver" && existingDriver != null)
             {
+                var token = GenerateJwtToken(existingDriver.Id, "driver");
                 // Если водитель найден — это вход
                 return (true, "Login successful", new
                 {
                     existingDriver.Id,
                     existingDriver.Phone,
-                    role = "driver"
+                    role = "driver",
+                    token
                 });
             }
 
@@ -150,11 +194,14 @@ namespace server.Services
                     var passenger = new Passenger { Phone = request.Phone };
                     _db.Passengers.Add(passenger);
                     await _db.SaveChangesAsync();
+
+                    var token = GenerateJwtToken(passenger.Id, "passenger");
                     return (true, "Registration successful", new
                     {
                         passenger.Id,
                         passenger.Phone,
-                        role = "passenger"
+                        role = "passenger",
+                        token
                     });
                 }
                 else if (request.Role == "driver")
@@ -162,11 +209,13 @@ namespace server.Services
                     var driver = new Driver { Phone = request.Phone };
                     _db.Drivers.Add(driver);
                     await _db.SaveChangesAsync();
+                    var token = GenerateJwtToken(driver.Id, "driver");
                     return (true, "Registration successful", new
                     {
                         driver.Id,
                         driver.Phone,
-                        role = "driver"
+                        role = "driver",
+                        token
                     });
                 }
                 else

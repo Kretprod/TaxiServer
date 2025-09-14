@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.SignalR;
 using server.Models.Dtos;
 using server.Services;
 using server.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace server.Endpoints
 {
@@ -23,9 +25,15 @@ namespace server.Endpoints
             });
 
             // Получение активной поездки для пассажира
-            app.MapGet("/api/rides/passenger/{passengerId:int}/active", async (int passengerId, IRideService rideService) =>
+            app.MapGet("/api/rides/passenger/active", [Authorize] async (IRideService rideService, ClaimsPrincipal user) =>
             {
-                var ride = await rideService.GetActiveRideForPassengerAsync(passengerId);
+                var userIdClaim = user.FindFirst("id");
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Results.Unauthorized();
+                }
+
+                var ride = await rideService.GetActiveRideForPassengerAsync(userId);
                 return Results.Ok(ride);
             });
 
@@ -48,8 +56,14 @@ namespace server.Endpoints
             });
 
             // Получение истории поездок пользователя (водителя или пассажира)
-            app.MapGet("/api/rides/history/{userId:int}", async (int userId, HttpRequest request, IRideService rideService) =>
+            app.MapGet("/api/rides/history", [Authorize] async (HttpRequest request, IRideService rideService, ClaimsPrincipal user) =>
             {
+                var userIdClaim = user.FindFirst("id");
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Results.Unauthorized();
+                }
+
                 var role = request.Query["role"].ToString();
 
                 if (string.IsNullOrWhiteSpace(role))
@@ -69,20 +83,29 @@ namespace server.Endpoints
             });
 
             // Принятие заказа водителем
-            app.MapPut("/api/rides/{orderId:int}/accept", async (int orderId, AcceptOrderRequest request, IRideService rideService) =>
+            app.MapPut("/api/rides/{orderId:int}/accept", [Authorize] async (int orderId, IRideService rideService, ClaimsPrincipal user) =>
             {
-                var (success, error) = await rideService.AcceptOrderAsync(orderId, request.DriverId);
+                var userIdClaim = user.FindFirst("id");
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Results.Unauthorized();
+                }
+
+                var (success, error) = await rideService.AcceptOrderAsync(orderId, userId);
                 if (!success)
                     return Results.BadRequest(new { error });
                 return Results.Ok(new { msg = "Заказ принят" });
             });
 
             // Получение активной поездки для водителя
-            app.MapGet("/api/rides/driver/{driverId:int}/active", async (int driverId, IRideService rideService) =>
+            app.MapGet("/api/rides/driver/active", [Authorize] async (IRideService rideService, ClaimsPrincipal user) =>
             {
-                var ride = await rideService.GetActiveRideForDriverAsync(driverId);
-                if (ride == null)
-                    return Results.NotFound(new { Message = "Водитель не найден или нет активной поездки" });
+                var userIdClaim = user.FindFirst("id");
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Results.Unauthorized();
+                }
+                var ride = await rideService.GetActiveRideForDriverAsync(userId);
                 return Results.Ok(ride);
             });
 
@@ -105,8 +128,12 @@ namespace server.Endpoints
             });
 
             // Получение списка доступных поездок (без назначенного водителя)
-            app.MapGet("/api/rides/available", async (IRideService rideService) =>
+            app.MapGet("/api/rides/available", [Authorize] async (IRideService rideService, ClaimsPrincipal user) =>
             {
+                // Проверяем, что пользователь аутентифицирован
+                if (!user.Identity?.IsAuthenticated ?? true)
+                    return Results.Unauthorized();
+
                 var rides = await rideService.GetAvailableRidesAsync();
                 return Results.Ok(rides);
             });

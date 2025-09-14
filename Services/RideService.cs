@@ -108,7 +108,7 @@ namespace server.Services
 
                 return (true, null, ride);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return (false, "Внутренняя ошибка сервера", null);
             }
