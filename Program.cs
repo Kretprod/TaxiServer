@@ -19,6 +19,10 @@ builder.Services.AddSignalR();
 // Регистрируем сервис для отправки email (EmailService)
 builder.Services.AddHttpClient<SmsService>();
 
+// Регистрируем сервисы бизнес-логики
+builder.Services.AddScoped<IRideService, RideService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
 // Настройка CORS — разрешаем любые заголовки, методы и источники (для разработки)
 builder.Services.AddCors(options =>
 {
