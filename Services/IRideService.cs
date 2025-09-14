@@ -7,7 +7,7 @@ namespace server.Services
     public interface IRideService
     {
         // Создание новой поездки с возвратом результата и созданной сущности
-        Task<(bool Success, IEnumerable<string>? Errors, Ride? Ride)> CreateRideAsync(RideCreateDto dto);
+        Task<(bool Success, IEnumerable<string>? Errors, Ride? Ride)> CreateRideAsync(RideCreateDto dto, int userId);
 
         // Получение активной поездки для пассажира
         Task<Ride?> GetActiveRideForPassengerAsync(int passengerId);

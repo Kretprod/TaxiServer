@@ -24,7 +24,7 @@ namespace server.Services
         }
 
         // Создаёт новую поездку на основе DTO с валидацией входных данных
-        public async Task<(bool Success, IEnumerable<string>? Errors, Ride? Ride)> CreateRideAsync(RideCreateDto dto)
+        public async Task<(bool Success, IEnumerable<string>? Errors, Ride? Ride)> CreateRideAsync(RideCreateDto dto, int userId)
         {
             var validationResults = new List<ValidationResult>();
             var validationContext = new ValidationContext(dto);
@@ -36,8 +36,8 @@ namespace server.Services
                 return (false, errors, null);
             }
 
-            // Проверка существования пассажира
-            var passenger = await _db.Passengers.FindAsync(dto.PassengerId);
+            // поиск обьекта пассажира
+            var passenger = await _db.Passengers.FindAsync(userId);
             if (passenger == null)
             {
                 return (false, new[] { "Пассажир не найден" }, null);
@@ -46,7 +46,7 @@ namespace server.Services
             // Создаём объект поездки с данными из DTO
             var ride = new Ride
             {
-                PassengerId = dto.PassengerId,
+                PassengerId = userId,
                 Passenger = passenger,
                 DriverId = dto.DriverId,
                 PickupLocation = dto.PickupLocation,

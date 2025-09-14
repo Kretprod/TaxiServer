@@ -5,9 +5,6 @@ namespace server.Models.Dtos
 {
     public class RideCreateDto
     {
-        [Required]
-        [JsonPropertyName("passenger_id")]
-        public int PassengerId { get; set; }
 
         public int? DriverId { get; set; }
 

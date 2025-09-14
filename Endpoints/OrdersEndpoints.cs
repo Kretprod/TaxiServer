@@ -13,10 +13,15 @@ namespace server.Endpoints
         public static void MapOrdersEndpoints(this WebApplication app)
         {
             // Создание новой поездки
-            app.MapPost("/api/rides/create", async (RideCreateDto dto, IRideService rideService) =>
+            app.MapPost("/api/rides/create", [Authorize] async (RideCreateDto dto, IRideService rideService, ClaimsPrincipal user) =>
             {
+                var userIdClaim = user.FindFirst("id");
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Results.Unauthorized();
+                }
                 // Вызываем сервис для создания поездки
-                var (success, errors, ride) = await rideService.CreateRideAsync(dto);
+                var (success, errors, ride) = await rideService.CreateRideAsync(dto, userId);
                 if (!success)
                     // Возвращаем ошибку 400 с деталями ошибок, если что-то не так
                     return Results.BadRequest(new { Errors = errors });
