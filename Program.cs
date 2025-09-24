@@ -60,6 +60,9 @@ builder.Services.AddHttpClient<SmsService>();
 builder.Services.AddScoped<IRideService, RideService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// регестрируем сервис для ежедневной проверки старой истории поездок и их удаление
+builder.Services.AddHostedService<RideHistoryCleanupService>();
+
 // Настройка CORS — разрешаем любые заголовки, методы и источники (для разработки)
 builder.Services.AddCors(options =>
 {

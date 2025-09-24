@@ -285,7 +285,7 @@ namespace server.Services
             }
         }
 
-        // Получает список доступных поездок (без водителя и со статусом "Ищет")
+        // Получает список доступных поездок (без водителя)
         public async Task<IEnumerable<Ride>> GetAvailableRidesAsync()
         {
             return await _db.Rides
