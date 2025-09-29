@@ -4,7 +4,7 @@ namespace server.Models
 {
     public abstract class User
     {
-        [Key]  // Добавьте, если Id — первичный ключ
+        [Key]  // если Id — первичный ключ
         public int Id { get; set; }  // Изменено с id на Id
 
         [Required]

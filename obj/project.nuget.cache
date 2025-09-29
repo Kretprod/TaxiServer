@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "1M9b9a3o+uQ=",
+  "dgSpecHash": "uaIKo/IPqm0=",
   "success": true,
   "projectFilePath": "C:\\VSCode\\Progect\\02\\server\\server.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\U_U\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\U_U\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",
+    "C:\\Users\\U_U\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
     "C:\\Users\\U_U\\.nuget\\packages\\bouncycastle.cryptography\\2.5.1\\bouncycastle.cryptography.2.5.1.nupkg.sha512",
     "C:\\Users\\U_U\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\U_U\\.nuget\\packages\\mailkit\\4.13.0\\mailkit.4.13.0.nupkg.sha512",

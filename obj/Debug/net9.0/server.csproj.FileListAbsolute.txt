@@ -164,3 +164,5 @@ C:\VSCode\Progect\02\server\obj\Debug\net9.0\server.pdb
 C:\VSCode\Progect\02\server\obj\Debug\net9.0\server.genruntimeconfig.cache
 C:\VSCode\Progect\02\server\obj\Debug\net9.0\ref\server.dll
 C:\VSCode\Progect\02\server\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\VSCode\Progect\02\server\bin\Debug\net9.0\server.staticwebassets.runtime.json
+C:\VSCode\Progect\02\server\bin\Debug\net9.0\BCrypt.Net-Next.dll

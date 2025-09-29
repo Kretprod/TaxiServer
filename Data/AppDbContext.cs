@@ -10,6 +10,8 @@ namespace server.Data
         public DbSet<Ride> Rides { get; set; }
         public DbSet<RideHistory> RideHistories { get; set; }
         public DbSet<VerificationCode> VerificationCodes { get; set; }
+        public DbSet<DriverDetails> DriverDetails { get; set; }
+        public DbSet<PricingSettings> PricingSettings { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
 
@@ -43,6 +45,30 @@ namespace server.Data
                 .Property(r => r.PaymentMethod)
                 .HasConversion<string>();
 
+
+            // Настройка связи один-к-одному Driver - DriverDetails
+            modelBuilder.Entity<Driver>()
+                .HasOne(d => d.DriverDetails)
+                .WithOne(dd => dd.Driver)
+                .HasForeignKey<DriverDetails>(dd => dd.DriverId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Конвертация enum DriverStatus в строку
+            modelBuilder.Entity<DriverDetails>()
+                .Property(dd => dd.Status)
+                .HasConversion<string>();
+
+
+            modelBuilder.Entity<PricingSettings>().HasData(
+                   new PricingSettings
+                   {
+                       Id = 1,
+                       BasePrice = 50m,
+                       PricePerKm = 20m,
+                       NightMultiplier = 1.2m,
+                       BadWeatherMultiplier = 1.3m
+                   }
+               );
             base.OnModelCreating(modelBuilder);
         }
     }

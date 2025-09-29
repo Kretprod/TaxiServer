@@ -192,6 +192,18 @@ namespace server.Services
                     return (false, "Водитель не найден");
                 }
 
+                // Проверяем дополнительную информацию водителя и статус
+                var driverDetails = await _db.DriverDetails.FindAsync(driverId);
+                if (driverDetails == null)
+                {
+                    return (false, "Водитель не прошёл регистрацию дополнительной информации");
+                }
+
+                if (driverDetails.Status != DriverStatus.Активен)
+                {
+                    return (false, $"Водитель не может принять заказ, Вам не подвердили дополнительную инфомрацию");
+                }
+
                 // Назначаем водителя и меняем статус
                 ride.DriverId = driverId;
                 ride.Status = RideStatus.Ожидает; // или нужный статус принятия

@@ -59,6 +59,9 @@ builder.Services.AddHttpClient<SmsService>();
 // Регистрируем сервисы бизнес-логики
 builder.Services.AddScoped<IRideService, RideService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IDriverDetails, DriverDetailsService>();
+builder.Services.AddScoped<IAdminn, AdminnService>();
+builder.Services.AddScoped<ICena, CenaService>();
 
 // регестрируем сервис для ежедневной проверки старой истории поездок и их удаление
 builder.Services.AddHostedService<RideHistoryCleanupService>();
@@ -87,8 +90,15 @@ var app = builder.Build();
 
 app.UseCors(); // Включаем CORS
 
+app.UseStaticFiles();
+
 app.MapOrdersEndpoints();  // подключаем маршруты заказов
 app.MapAuthEndpoints();    // подключаем маршруты регистрации
+app.MapDriverDetailsEndpoints();
+app.MapAdminnEndpoints();
+app.MapCenaEndpoints();
+
+
 
 // Подключаем SignalR хаб для real-time обновлений заказов
 app.MapHub<OrdersHub>("/ordersHub");
