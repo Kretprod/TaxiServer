@@ -31,7 +31,7 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuer = true,
         ValidateAudience = true,
-        ValidateLifetime = true,
+        ValidateLifetime = false,
         ValidateIssuerSigningKey = true,
 
         ValidIssuer = jwtSettings.GetValue<string>("Issuer"),
@@ -88,7 +88,25 @@ builder.Logging.AddConsole();
 
 var app = builder.Build();
 
-app.UseCors(); // Включаем CORS
+// Применяем миграции EF Core при старте приложения
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    try
+    {
+        dbContext.Database.Migrate();  // Применит все pending миграции, создаст таблицы
+        Console.WriteLine("Migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        // Логируем ошибку, если миграции не удались (например, проблемы с подключением)
+        Console.WriteLine($"Migration failed: {ex.Message}");
+        // В проде можно выбросить исключение или обработать иначе
+    }
+}
+
+
+app.UseCors(); // Включаем CORSA
 
 app.UseStaticFiles();
 

@@ -14,6 +14,11 @@ namespace server.Services
 
         // Получение активной поездки для водителя
         Task<Ride?> GetActiveRideForDriverAsync(int driverId);
+        // Метод для получения информации о пассажире по ID поездки
+        Task<PassengerInfoDto?> GetPassengerInfoForRideAsync(int rideId);
+
+        // Метод для получения информации о водителе по ID поездки
+        Task<DriverInfoDto?> GetDriverInfoForRideAsync(int rideId);
 
         // Обновление цены поездки
         Task<(bool Success, string? ErrorMessage, Ride? UpdatedRide)> UpdateRidePriceAsync(int orderId, decimal amount);

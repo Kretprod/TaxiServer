@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "uaIKo/IPqm0=",
+  "dgSpecHash": "VnvD99I4rm8=",
   "success": true,
-  "projectFilePath": "C:\\VSCode\\Progect\\02\\server\\server.csproj",
+  "projectFilePath": "C:\\VSCode\\Progect\\project-root\\backend\\server.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\U_U\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\U_U\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

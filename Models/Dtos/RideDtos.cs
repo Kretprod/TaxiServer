@@ -60,4 +60,18 @@ namespace server.Models.Dtos
     {
         public decimal Amount { get; set; }
     }
+
+    public class DriverInfoDto
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string CarNumber { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+    }
+
+
+    public class PassengerInfoDto
+    {
+        public string Phone { get; set; } = string.Empty;
+    }
 }

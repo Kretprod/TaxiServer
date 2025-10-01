@@ -39,7 +39,18 @@ namespace server.Endpoints
                 }
 
                 var ride = await rideService.GetActiveRideForPassengerAsync(userId);
-                return Results.Ok(ride);
+
+                DriverInfoDto? driverInfo = null;
+                if (ride != null)
+                {
+                    driverInfo = await rideService.GetDriverInfoForRideAsync(ride.Id);
+                }
+
+                return Results.Ok(new
+                {
+                    Ride = ride,
+                    DriverInfo = driverInfo  // Будет null, если водителя нет или деталей нет
+                });
             });
 
             // Обновление цены поездки
@@ -111,7 +122,18 @@ namespace server.Endpoints
                     return Results.Unauthorized();
                 }
                 var ride = await rideService.GetActiveRideForDriverAsync(userId);
-                return Results.Ok(ride);
+
+                PassengerInfoDto? passengerInfo = null;
+                if (ride != null)
+                {
+                    passengerInfo = await rideService.GetPassengerInfoForRideAsync(ride.Id);
+                }
+
+                return Results.Ok(new
+                {
+                    Ride = ride,
+                    PassengerInfo = passengerInfo  // Будет null, если пассажира нет
+                });
             });
 
             // Обновление статуса заказа (например, "Ожидает", "Подъезжает" и т.д.)

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\VSCode\\Progect\\02\\server\\server.csproj": {}
+    "C:\\VSCode\\Progect\\project-root\\backend\\server.csproj": {}
   },
   "projects": {
-    "C:\\VSCode\\Progect\\02\\server\\server.csproj": {
+    "C:\\VSCode\\Progect\\project-root\\backend\\server.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\VSCode\\Progect\\02\\server\\server.csproj",
+        "projectUniqueName": "C:\\VSCode\\Progect\\project-root\\backend\\server.csproj",
         "projectName": "server",
-        "projectPath": "C:\\VSCode\\Progect\\02\\server\\server.csproj",
+        "projectPath": "C:\\VSCode\\Progect\\project-root\\backend\\server.csproj",
         "packagesPath": "C:\\Users\\U_U\\.nuget\\packages\\",
-        "outputPath": "C:\\VSCode\\Progect\\02\\server\\obj\\",
+        "outputPath": "C:\\VSCode\\Progect\\project-root\\backend\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\U_U\\AppData\\Roaming\\NuGet\\NuGet.Config"

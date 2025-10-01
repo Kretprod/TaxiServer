@@ -42,6 +42,12 @@ namespace server.Services
             {
                 return (false, new[] { "Пассажир не найден" }, null);
             }
+            // Проверка на наличие любой поездки у пассажира
+            var existingRide = await _db.Rides.FirstOrDefaultAsync(r => r.PassengerId == userId);
+            if (existingRide != null)
+            {
+                return (false, new[] { "У вас уже есть поездка. Завершите или отмените её перед созданием новой." }, null);
+            }
 
             // Создаём объект поездки с данными из DTO
             var ride = new Ride
@@ -82,6 +88,27 @@ namespace server.Services
                         .Where(r => r.PassengerId == passengerId)
                         .FirstOrDefaultAsync();
         }
+        public async Task<DriverInfoDto?> GetDriverInfoForRideAsync(int rideId)
+        {
+            var ride = await _db.Rides
+                .Include(r => r.Driver)
+                .ThenInclude(d => d!.DriverDetails)
+                .FirstOrDefaultAsync(r => r.Id == rideId);
+
+            if (ride?.Driver?.DriverDetails == null)
+            {
+                return null;
+            }
+
+            return new DriverInfoDto
+            {
+                FirstName = ride.Driver.DriverDetails.FirstName,
+                LastName = ride.Driver.DriverDetails.LastName,
+                CarNumber = ride.Driver.DriverDetails.CarNumber,
+                Phone = ride.Driver.Phone
+            };
+        }
+
 
         // Получает активную поездку для водителя 
         public async Task<Ride?> GetActiveRideForDriverAsync(int driverId)
@@ -89,6 +116,22 @@ namespace server.Services
             return await _db.Rides
                         .Where(r => r.DriverId == driverId)
                         .FirstOrDefaultAsync();
+        }
+        public async Task<PassengerInfoDto?> GetPassengerInfoForRideAsync(int rideId)
+        {
+            var ride = await _db.Rides
+                .Include(r => r.Passenger)
+                .FirstOrDefaultAsync(r => r.Id == rideId);
+
+            if (ride?.Passenger == null)
+            {
+                return null;
+            }
+
+            return new PassengerInfoDto
+            {
+                Phone = ride.Passenger.Phone
+            };
         }
 
         /// Обновляет цену поездки
@@ -202,6 +245,12 @@ namespace server.Services
                 if (driverDetails.Status != DriverStatus.Активен)
                 {
                     return (false, $"Водитель не может принять заказ, Вам не подвердили дополнительную инфомрацию");
+                }
+                // Проверка на наличие любой поездки у пассажира
+                var existingRide = await _db.Rides.FirstOrDefaultAsync(r => r.DriverId == driverId);
+                if (existingRide != null)
+                {
+                    return (false, "У вас уже есть поездка. Завершите или отмените её перед созданием новой.");
                 }
 
                 // Назначаем водителя и меняем статус

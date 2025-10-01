@@ -40,7 +40,6 @@ namespace server.Services
 
             var issuer = jwtSettings.GetValue<string>("Issuer");
             var audience = jwtSettings.GetValue<string>("Audience");
-            var expiryMinutes = jwtSettings.GetValue<int>("ExpiryMinutes");
 
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -55,7 +54,6 @@ namespace server.Services
                 issuer: issuer,
                 audience: audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
