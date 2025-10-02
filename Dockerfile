@@ -15,4 +15,7 @@ RUN dotnet publish -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+
+COPY --from=build /src/wwwroot ./wwwroot
+
 ENTRYPOINT ["dotnet", "server.dll"]

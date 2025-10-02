@@ -60,7 +60,6 @@ namespace server.Services
         // Новый метод: Получить водителей на проверке
         public async Task<List<DriverPendingDto>> GetPendingDriversAsync()
         {
-            var baseUrl = "http://192.168.0.7:5251";  // Или используй IConfiguration для динамического URL
             return await _db.DriverDetails
                 .Where(d => d.Status == DriverStatus.НаПроверке)
                 .Select(d => new DriverPendingDto
@@ -70,15 +69,14 @@ namespace server.Services
                     LastName = d.LastName,
                     CarNumber = d.CarNumber,
                     DriverLicenseNumber = d.DriverLicenseNumber,
-                    CarPhotoUrl = $"{baseUrl}{d.CarPhotoUrl}",
-                    DriverLicensePhotoUrl = $"{baseUrl}{d.DriverLicensePhotoUrl}"
+                    CarPhotoUrl = $"{d.CarPhotoUrl}",
+                    DriverLicensePhotoUrl = $"{d.DriverLicensePhotoUrl}"
                 })
                 .ToListAsync();
         }
 
         public async Task<List<DriverActiveDto>> GetActiveDriversAsync()
         {
-            var baseUrl = "http://192.168.0.7:5251";  // Или используй IConfiguration для динамического URL
             return await _db.DriverDetails
                 .Where(d => d.Status == DriverStatus.Активен)
                 .Select(d => new DriverActiveDto
@@ -88,8 +86,8 @@ namespace server.Services
                     LastName = d.LastName,
                     CarNumber = d.CarNumber,
                     DriverLicenseNumber = d.DriverLicenseNumber,
-                    CarPhotoUrl = $"{baseUrl}{d.CarPhotoUrl}",
-                    DriverLicensePhotoUrl = $"{baseUrl}{d.DriverLicensePhotoUrl}",
+                    CarPhotoUrl = $"{d.CarPhotoUrl}",
+                    DriverLicensePhotoUrl = $"{d.DriverLicensePhotoUrl}",
                     Status = d.Status.ToString()  // Добавляем статус как строку
                 })
                 .ToListAsync();
