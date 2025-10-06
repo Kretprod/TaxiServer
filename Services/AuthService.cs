@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Telegram.Bot;
 
 namespace server.Services
 {
@@ -15,15 +16,13 @@ namespace server.Services
     public class AuthService : IAuthService
     {
         private readonly AppDbContext _db;          // Контекст БД для работы с данными
-        private readonly SmsService _smsService;    // Сервис для отправки SMS (код подтверждения)
         private readonly ILogger<AuthService> _logger;  // Логгер для записи информации и ошибок
 
         private readonly IConfiguration _configuration; // Для чтения настроек токена
 
-        public AuthService(AppDbContext db, SmsService smsService, ILogger<AuthService> logger, IConfiguration configuration)
+        public AuthService(AppDbContext db, ILogger<AuthService> logger, IConfiguration configuration)
         {
             _db = db;
-            _smsService = smsService;
             _logger = logger;
             _configuration = configuration;
         }
@@ -108,12 +107,8 @@ namespace server.Services
                 _db.VerificationCodes.Add(verificationCode);
                 await _db.SaveChangesAsync();
 
-                // Здесь отпровляем SMS через _smsService (закомментировано для теста)
-                // await _smsService.SendVerificationCodeAsync(request.Phone, code);
-
-                _logger.LogInformation("Verification code sent to {Phone}", request.Phone);
-                // Для теста выводим код в консоль
                 Console.WriteLine($"Verification code for {request.Phone}: {code}");
+
                 return (true, null);
             }
             catch (Exception ex)

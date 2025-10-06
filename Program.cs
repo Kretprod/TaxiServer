@@ -52,6 +52,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Регистрируем SignalR для real-time коммуникаций
 builder.Services.AddSignalR();
+builder.Services.AddHttpClient();
 
 // Регистрируем сервис для отправки email (EmailService)
 builder.Services.AddHttpClient<SmsService>();
@@ -65,6 +66,7 @@ builder.Services.AddScoped<ICena, CenaService>();
 
 // регестрируем сервис для ежедневной проверки старой истории поездок и их удаление
 builder.Services.AddHostedService<RideHistoryCleanupService>();
+
 
 // Настройка CORS — разрешаем любые заголовки, методы и источники (для разработки)
 builder.Services.AddCors(options =>
