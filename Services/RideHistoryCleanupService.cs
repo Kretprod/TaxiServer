@@ -32,20 +32,18 @@ public class RideHistoryCleanupService : BackgroundService
 
                     var thresholdDate = DateTime.UtcNow.AddDays(-14);
 
-                    var oldRecords = await db.RideHistories
+                    // Оптимизированное массовое удаление без загрузки в память
+                    var deletedCount = await db.RideHistories
                         .Where(r => r.CompletedAt < thresholdDate)
-                        .ToListAsync(stoppingToken);
+                        .ExecuteDeleteAsync(stoppingToken);  // Массовое удаление в БД
 
-                    if (oldRecords.Any())
+                    // Логируем результат
+                    if (deletedCount > 0)
                     {
-                        db.RideHistories.RemoveRange(oldRecords);
-                        await db.SaveChangesAsync(stoppingToken);
-                        // Логируем информацию об удалении
-                        _logger.LogInformation("Удалено {Count} записей истории поездок старше 14 дней.", oldRecords.Count);
+                        _logger.LogInformation("Удалено {Count} записей истории поездок старше 14 дней.", deletedCount);
                     }
                     else
                     {
-                        // Логируем, что записей для удаления не найдено
                         _logger.LogInformation("Записей для удаления не найдено.");
                     }
                 }

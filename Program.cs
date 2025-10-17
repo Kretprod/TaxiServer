@@ -12,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseUrls("http://0.0.0.0:5251");
 
+
+
 // Читаем настройки JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings.GetValue<string>("SecretKey");
@@ -54,8 +56,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
 
-// Регистрируем сервис для отправки email (EmailService)
-builder.Services.AddHttpClient<SmsService>();
 
 // Регистрируем сервисы бизнес-логики
 builder.Services.AddScoped<IRideService, RideService>();
@@ -63,6 +63,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDriverDetails, DriverDetailsService>();
 builder.Services.AddScoped<IAdminn, AdminnService>();
 builder.Services.AddScoped<ICena, CenaService>();
+
 
 // регестрируем сервис для ежедневной проверки старой истории поездок и их удаление
 builder.Services.AddHostedService<RideHistoryCleanupService>();
@@ -87,6 +88,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 // Добавляем логирование в консоль
 builder.Logging.AddConsole();
+
 
 var app = builder.Build();
 
@@ -117,8 +119,6 @@ app.MapAuthEndpoints();    // подключаем маршруты регист
 app.MapDriverDetailsEndpoints();
 app.MapAdminnEndpoints();
 app.MapCenaEndpoints();
-
-
 
 // Подключаем SignalR хаб для real-time обновлений заказов
 app.MapHub<OrdersHub>("/ordersHub");

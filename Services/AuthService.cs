@@ -8,7 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Telegram.Bot;
+
 
 namespace server.Services
 {
@@ -20,11 +20,14 @@ namespace server.Services
 
         private readonly IConfiguration _configuration; // Для чтения настроек токена
 
-        public AuthService(AppDbContext db, ILogger<AuthService> logger, IConfiguration configuration)
+        private readonly HttpClient _httpClient;
+
+        public AuthService(AppDbContext db, ILogger<AuthService> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
             _db = db;
             _logger = logger;
             _configuration = configuration;
+            _httpClient = httpClientFactory.CreateClient();
         }
 
         // Метод для генерации JWT токена
@@ -108,6 +111,25 @@ namespace server.Services
                 await _db.SaveChangesAsync();
 
                 Console.WriteLine($"Verification code for {request.Phone}: {code}");
+
+                // Отправка сообщения пользователю: отправляем запрос к Telegram Bot API
+                var apiKey = _configuration["ApiKey"]; if (string.IsNullOrEmpty(apiKey)) { _logger.LogError("ApiKey не настроен в конфигурации"); return (false, new[] { "Failed to send code" }); }
+                var requestUrl = $"http://telegram-api:5555/api/send-messageBot";
+                var message = $"Ваш код верификации: {code}";  // Сообщение с кодом
+
+                var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUrl)
+                {
+                    Content = new MultipartFormDataContent { { new StringContent(request.Phone), "phone" }, { new StringContent(message), "message" } }
+                };
+                httpRequest.Headers.Add("X-API-Key", apiKey);
+
+                var response = await _httpClient.SendAsync(httpRequest);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorMessage = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Ошибка отправки сообщения боту: {StatusCode} - {ErrorMessage}", response.StatusCode, errorMessage);
+                    return (false, new[] { "Failed to send code" });
+                }
 
                 return (true, null);
             }

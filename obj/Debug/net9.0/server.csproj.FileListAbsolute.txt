@@ -243,7 +243,6 @@ C:\VSCode\Progect\project-root\backend\bin\Debug\net9.0\System.Runtime.Caching.d
 C:\VSCode\Progect\project-root\backend\bin\Debug\net9.0\System.Security.Cryptography.ProtectedData.dll
 C:\VSCode\Progect\project-root\backend\bin\Debug\net9.0\System.Security.Permissions.dll
 C:\VSCode\Progect\project-root\backend\bin\Debug\net9.0\System.Windows.Extensions.dll
-C:\VSCode\Progect\project-root\backend\bin\Debug\net9.0\Telegram.Bot.dll
 C:\VSCode\Progect\project-root\backend\bin\Debug\net9.0\cs\Microsoft.CodeAnalysis.resources.dll
 C:\VSCode\Progect\project-root\backend\bin\Debug\net9.0\de\Microsoft.CodeAnalysis.resources.dll
 C:\VSCode\Progect\project-root\backend\bin\Debug\net9.0\es\Microsoft.CodeAnalysis.resources.dll

@@ -12,6 +12,7 @@ namespace server.Data
         public DbSet<VerificationCode> VerificationCodes { get; set; }
         public DbSet<DriverDetails> DriverDetails { get; set; }
         public DbSet<PricingSettings> PricingSettings { get; set; }
+        public DbSet<TelegramUser> TelegramUser { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
 
